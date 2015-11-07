@@ -1,6 +1,12 @@
 #include <SPI.h>
 #include "mcp_can.h"
 
+/*
+wishlist:
+TPMS - https://github.com/jboone/tpms
+Gas Mileage
+*/
+
 //non-boolean values
 int backlightIntensity = 0;
 int rpm = 0;
@@ -49,7 +55,7 @@ const int rpmPerQuad = 2700;
 const int rpmOffset = 350 ;
 
 // Constants for pin definition
-const int slaveSelectPin = 9;
+const int melexisSelectPin1 = 9;
 const int selectPinMISO=7;
 const int selectPinMOSI=11;
 const int clockPin=13;
@@ -79,8 +85,6 @@ unsigned char buf[8] = {65, 0, 0, 0, 0, 0, 30, 0};
 unsigned int canId = 640;
 
 boolean can_init = false;
-
-
 
 MCP_CAN CAN(SPI_CS_PIN); // Set CS pin for CAN shield
 
@@ -357,12 +361,12 @@ int tachWrite(int rpm_int) { // takes a integer RPM value and sends to Melexis
   wordTach = (wordTach << 2) | quadTach;
   testValueA = maskTach | highByte(wordTach);
   testValueB = lowByte(wordTach);
-  digitalGaugeWrite(testValueA, testValueB);
+  digitalGaugeWrite(testValueA, testValueB, melexisSelectPin1);
 }
 
 // Function to write to the Melexis over SPI for any two bytes
-int digitalGaugeWrite(byte testValueA, byte testValueB) {
-  digitalWrite(slaveSelectPin,HIGH);
+int digitalGaugeWrite(byte testValueA, byte testValueB, int chipSelectPin) {
+  digitalWrite(chipSelectPin,HIGH);
   // wait one clock cycle
   delayMicroseconds(2);
   // transfer the first half of the two byte command
@@ -370,7 +374,7 @@ int digitalGaugeWrite(byte testValueA, byte testValueB) {
   // transfer the second half
   SPI.transfer(testValueB);
   // Set the SS pin low to deactivate the chip
-  digitalWrite(slaveSelectPin,LOW); 
+  digitalWrite(chipSelectPin,LOW); 
 }
 
 void canRead(){
@@ -410,7 +414,7 @@ void initGauges(){
   SPI.setDataMode(SPI_MODE0);
   SPI.setClockDivider(SPI_CLOCK_DIV32);
   // set the pin modes
-  pinMode (slaveSelectPin, OUTPUT);
+  pinMode (melexisSelectPin1, OUTPUT);
   pinMode (selectPinMISO, INPUT);
   pinMode (selectPinMOSI, OUTPUT);
   pinMode (clockPin, OUTPUT);
@@ -418,7 +422,7 @@ void initGauges(){
   pinMode (resetPin, OUTPUT);
 
   // Set "at-rest" states for SS, clock and LED pins
-  digitalWrite(slaveSelectPin,LOW);
+  digitalWrite(melexisSelectPin1,LOW);
   digitalWrite(clockPin, LOW);
   digitalWrite(ledPin,LOW);
   digitalWrite(resetPin,HIGH);
@@ -426,6 +430,8 @@ void initGauges(){
   delay(1000);
 
   // Perform a sweep of the tach to home the needle
+  // We need to work on this, and cycle all gauges at the same rate. 
+  // Instead of sending rpm's (unit of measure specific) we could send the actual frations of the gauge's range
   for(int x = 8000; x >0; x--) {
     tachWrite(x);
   }
