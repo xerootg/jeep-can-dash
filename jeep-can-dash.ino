@@ -185,7 +185,7 @@ void setAmbientTemp(float currentAmbientTemp){
 	}
 	
 	// calculate the average and set it
-	ambinetTemp = ambientTotal / ambientNumReadings;
+	ambientTemp = ambientTotal / ambientNumReadings;
 }
 word getFuelLevel(){
   return fuelLevel;
